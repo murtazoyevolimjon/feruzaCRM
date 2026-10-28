@@ -1,0 +1,1 @@
+ALTER TABLE "Student" ALTER COLUMN "birth_date" DROP NOT NULL;

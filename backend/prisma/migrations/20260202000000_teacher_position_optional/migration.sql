@@ -1,0 +1,1 @@
+ALTER TABLE "Teacher" ALTER COLUMN "position" DROP NOT NULL;

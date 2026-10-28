@@ -1,0 +1,36 @@
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: erp_user
+      POSTGRES_PASSWORD: datapass
+      POSTGRES_DB: erp_data
+    ports:
+      - "127.0.0.1:5436:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6389:6379"
+
+  app:
+    build: ./backend
+    restart: unless-stopped
+    env_file: ./backend/.env
+    environment:
+      # compose ichida servislar nomi bilan ulanadi
+      DATABASE_URL: postgresql://erp_user:datapass@postgres:5432/erp_data?schema=public
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+    ports:
+      - "8002:3000"
+    depends_on:
+      - postgres
+      - redis
+
+volumes:
+  pgdata:

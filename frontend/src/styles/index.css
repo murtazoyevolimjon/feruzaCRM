@@ -1,0 +1,76 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-[#F1F5F9] font-sans text-[13px] text-slate-800 antialiased;
+  }
+  html.dark body {
+    @apply bg-slate-950 text-slate-100;
+  }
+  h1 {
+    @apply text-[24px] font-semibold text-slate-900;
+  }
+  h2 {
+    @apply text-[18px] font-semibold;
+  }
+  html.dark h1 {
+    @apply text-white;
+  }
+}
+
+@layer components {
+  /* Eski nomlar saqlangan: barcha sahifalar yangi dizaynni avtomatik oladi */
+  .glass-panel {
+    @apply rounded-xl border border-slate-200 bg-white shadow-sm;
+  }
+  html.dark .glass-panel {
+    @apply border-slate-800 bg-slate-900;
+  }
+  .brand-gradient {
+    @apply bg-brand text-white;
+  }
+  .brand-gradient-text {
+    @apply text-brand;
+  }
+  .input {
+    @apply w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] outline-none transition focus:border-brand focus:ring-2 focus:ring-indigo-100;
+  }
+  html.dark .input {
+    @apply border-slate-700 bg-slate-800 text-slate-100 focus:ring-indigo-900;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-[13px] font-medium transition disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply bg-brand text-white shadow-sm hover:bg-brand-dark;
+  }
+  .btn-ghost {
+    @apply border border-slate-200 bg-white text-slate-700 hover:bg-slate-50;
+  }
+  html.dark .btn-ghost {
+    @apply border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800;
+  }
+  .btn-danger {
+    @apply bg-bad text-white hover:bg-red-600;
+  }
+  .pill {
+    @apply rounded-lg px-3.5 py-1.5 text-[13px] font-medium transition;
+  }
+  .pill-active {
+    @apply bg-brand text-white shadow-sm;
+  }
+  .pill-idle {
+    @apply border border-slate-200 bg-white text-slate-600 hover:bg-slate-50;
+  }
+  html.dark .pill-idle {
+    @apply border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800;
+  }
+  .label {
+    @apply text-[12px] font-medium text-slate-500;
+  }
+  .th {
+    @apply px-4 py-3 text-left text-[12px] font-medium uppercase tracking-wide text-slate-500;
+  }
+}
