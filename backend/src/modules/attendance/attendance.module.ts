@@ -35,6 +35,16 @@ export class MarkAttendanceDto {
   isPresent: boolean;
 }
 
+export class MarkAllAttendanceDto {
+  @ApiProperty({ example: 1 })
+  @IsInt()
+  lessonId: number;
+
+  @ApiProperty({ example: true })
+  @IsBoolean()
+  isPresent: boolean;
+}
+
 @Injectable()
 export class AttendanceService {
   constructor(private readonly prisma: PrismaService) {}
@@ -53,6 +63,37 @@ export class AttendanceService {
       include: { student: { select: { id: true, fullName: true } } },
     });
     return { success: true, data };
+  }
+
+  /**
+   * Guruhning barcha faol talabalarini bir so'rovda belgilaydi (N+1 yo'q):
+   * 1 ta a'zolar so'rovi + tranzaksiyada createMany va updateMany.
+   */
+  async markAll(dto: MarkAllAttendanceDto, user: AuthUser) {
+    const lesson = await this.lessonOrThrow(dto.lessonId, user);
+    const members = await this.prisma.studentGroup.findMany({
+      where: { groupId: lesson.groupId, status: Status.ACTIVE },
+      select: { studentId: true },
+    });
+    const studentIds = members.map((m) => m.studentId);
+    const who = creatorIds(user);
+
+    await this.prisma.$transaction([
+      this.prisma.attendance.createMany({
+        data: studentIds.map((studentId) => ({
+          lessonId: dto.lessonId,
+          studentId,
+          isPresent: dto.isPresent,
+          ...who,
+        })),
+        skipDuplicates: true,
+      }),
+      this.prisma.attendance.updateMany({
+        where: { lessonId: dto.lessonId, studentId: { in: studentIds } },
+        data: { isPresent: dto.isPresent, ...who },
+      }),
+    ]);
+    return { success: true, message: 'Davomat saqlandi', count: studentIds.length };
   }
 
   /** Bir dars + bir talaba uchun davomat yagona yozuv (upsert). */
@@ -89,6 +130,11 @@ export class AttendanceController {
   @Post()
   mark(@Body() dto: MarkAttendanceDto, @CurrentUser() user: AuthUser) {
     return this.attendance.mark(dto, user);
+  }
+
+  @Post('mark-all')
+  markAll(@Body() dto: MarkAllAttendanceDto, @CurrentUser() user: AuthUser) {
+    return this.attendance.markAll(dto, user);
   }
 }
 

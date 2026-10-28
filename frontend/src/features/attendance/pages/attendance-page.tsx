@@ -52,9 +52,7 @@ export default function AttendancePage({ panel }: { panel: 'admin' | 'teacher' }
     setBusy(true);
     setMsg(null);
     try {
-      for (const m of members) {
-        await send('post', '/attendance', { lessonId: Number(lessonId), studentId: m.id, isPresent: true });
-      }
+      await send('post', '/attendance/mark-all', { lessonId: Number(lessonId), isPresent: true });
       await marks.reload();
     } catch (e) {
       setMsg(errorMessage(e));
