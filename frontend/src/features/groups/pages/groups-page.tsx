@@ -93,6 +93,13 @@ function CreateGroupModal({ onClose, onCreated }: { onClose: () => void; onCreat
   );
 }
 
+const STRIPES = ['from-indigo-500 to-violet-500', 'from-sky-400 to-indigo-500', 'from-emerald-400 to-teal-500', 'from-amber-400 to-orange-500', 'from-rose-400 to-pink-500', 'from-fuchsia-500 to-purple-500'];
+function stripe(name: string): string {
+  let h = 0;
+  for (const c of name) h = (h * 31 + c.charCodeAt(0)) % 997;
+  return STRIPES[h % STRIPES.length];
+}
+
 function endTime(start: string, minutes: number): string {
   const [h, m] = start.split(':').map(Number);
   const total = h * 60 + m + minutes;
@@ -176,26 +183,27 @@ export default function GroupsPage({ panel }: { panel: Panel }) {
 
       <AsyncState loading={loading} error={error} empty={groups.length === 0}>
         {view === 'cards' ? (
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="stagger grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
             {groups.map((g) => {
               const full = g.studentsCount >= g.roomCapacity;
               const pattern = dayPattern(g.weekDays);
               return (
-                <div key={g.id} className="glass-panel flex flex-col p-5">
+                <div key={g.id} className="glass-panel hover-lift relative flex flex-col overflow-hidden p-5 pt-6">
+                  <div className={`absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r ${stripe(g.courseName)}`} />
                   <div className="mb-2 flex items-center justify-between">
                     <Badge tone="sky">{g.courseName}</Badge>
                     <span className="text-[12px] text-slate-400">#GRP-{g.id}</span>
                   </div>
                   <h2 className="mb-3">{g.name}</h2>
                   <div className="mb-3 flex items-center gap-2">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-soft text-[12px] font-semibold text-brand">{initials(g.teacherName)}</span>
+                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 text-[12px] font-bold text-white shadow-md">{initials(g.teacherName)}</span>
                     <span className="font-medium">{g.teacherName}</span>
                   </div>
                   <dl className="mb-4 space-y-1 text-slate-600 dark:text-slate-300">
-                    <div>🕒 {g.lessonTime} - {endTime(g.lessonTime, g.lessonDurationMinutes)}</div>
-                    <div>🚪 {g.roomName}</div>
-                    <div>📅 {pattern ? `${pattern} · ` : ''}{g.weekDays.map((d) => DAY_SHORT[d]).join('-')}</div>
-                    <div>🚀 Boshlanish: {formatDate(g.startDate)}</div>
+                    <div>ðŸ•’ {g.lessonTime} - {endTime(g.lessonTime, g.lessonDurationMinutes)}</div>
+                    <div>ðŸšª {g.roomName}</div>
+                    <div>ðŸ“… {pattern ? `${pattern} Â· ` : ''}{g.weekDays.map((d) => DAY_SHORT[d]).join('-')}</div>
+                    <div>ðŸš€ Boshlanish: {formatDate(g.startDate)}</div>
                   </dl>
                   <div className="mb-4">
                     <div className="mb-1 flex justify-between text-[12px]">
@@ -230,7 +238,7 @@ export default function GroupsPage({ panel }: { panel: Panel }) {
                     <td className="px-4 py-3 font-medium">{g.name}</td>
                     <td className="px-4 py-3">{g.courseName}</td>
                     <td className="px-4 py-3">{g.teacherName}</td>
-                    <td className="px-4 py-3">{g.lessonTime} · {g.weekDays.map((d) => DAY_SHORT[d]).join('-')}</td>
+                    <td className="px-4 py-3">{g.lessonTime} Â· {g.weekDays.map((d) => DAY_SHORT[d]).join('-')}</td>
                     <td className="px-4 py-3">{g.roomName}</td>
                     <td className="px-4 py-3">{g.studentsCount} / {g.roomCapacity}</td>
                     <td className="px-4 py-3 text-right">

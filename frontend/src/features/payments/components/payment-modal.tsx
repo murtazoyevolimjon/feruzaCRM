@@ -9,11 +9,13 @@ interface CardStart {
   data: { otpSessionId: string; maskedPhone: string };
 }
 
-/** Karta to'lovi: to'liq karta raqami yuborilmaydi — faqat oxirgi 4 raqam, muddat va telefon. */
+/** Karta to'lovi: to'liq karta raqami yuborilmaydi â€” faqat oxirgi 4 raqam, muddat va telefon. */
 export function PaymentModal({
   group,
   studentId,
   price,
+  priceLabel,
+  allowCash,
   onClose,
   onDone,
 }: {
@@ -22,12 +24,15 @@ export function PaymentModal({
   studentId?: number;
   /** Kurs narxi: tezkor summa tugmalari uchun */
   price?: number;
+  priceLabel?: string;
+  /** Faqat admin: naqd pul qabul qilish */
+  allowCash?: boolean;
   onClose: () => void;
   onDone: () => void;
 }) {
   const { t } = useTranslation();
   const [amount, setAmount] = useState(String(price ?? 500000));
-  const [method, setMethod] = useState<PaymentMethod>('KYN');
+  const [method, setMethod] = useState<PaymentMethod>(allowCash ? 'CASH' : 'KYN');
   const [cardLast4, setLast4] = useState('');
   const [cardExpiry, setExpiry] = useState('');
   const [phoneNumber, setPhone] = useState('');
@@ -50,7 +55,11 @@ export function PaymentModal({
         paymentMethod: method,
         ...(method === 'CARD' ? { cardLast4, cardExpiry, phoneNumber } : {}),
       };
-      if (method === 'CARD') {
+      if (method === 'CASH') {
+        await send('post', '/payments/create', body);
+        setSuccess(true);
+        onDone();
+      } else if (method === 'CARD') {
         const res = await send<CardStart>('post', '/payments/create', body);
         setOtp({ sessionId: res.data.otpSessionId, phone: res.data.maskedPhone });
       } else {
@@ -81,7 +90,7 @@ export function PaymentModal({
   };
 
   return (
-    <Modal title={`${t('pay')} — ${group.name}`} onClose={onClose}>
+    <Modal title={`${t('pay')} â€” ${group.name}`} onClose={onClose}>
       {success ? (
         <p className="rounded-lg bg-emerald-50 p-4 text-ok">To'lov muvaffaqiyatli amalga oshirildi.</p>
       ) : otp ? (
@@ -101,7 +110,7 @@ export function PaymentModal({
           {price ? (
             <div className="-mt-1 mb-3 flex flex-wrap gap-2">
               {[
-                { label: "To'liq narx", value: price },
+                { label: priceLabel ?? "To'liq narx", value: price },
                 { label: '50%', value: Math.round(price / 2) },
               ].map((c) => (
                 <button type="button" key={c.label} className="pill pill-idle" onClick={() => setAmount(String(c.value))}>
@@ -111,9 +120,9 @@ export function PaymentModal({
             </div>
           ) : null}
           <div className="mb-3 flex gap-2">
-            {(['KYN', 'CARD'] as const).map((m) => (
+            {(allowCash ? (['CASH', 'KYN', 'CARD'] as const) : (['KYN', 'CARD'] as const)).map((m) => (
               <button type="button" key={m} onClick={() => setMethod(m)} className={`pill flex-1 ${method === m ? 'pill-active' : 'pill-idle'}`}>
-                {m === 'KYN' ? 'KYN (onlayn)' : 'Karta'}
+                {m === 'KYN' ? 'KYN (onlayn)' : m === 'CARD' ? 'Karta' : 'Naqd'}
               </button>
             ))}
           </div>

@@ -29,6 +29,40 @@ export class AuthService {
     private readonly jwt: JwtService,
   ) {}
 
+  /** Rolni o'zi aniqlaydi: email User, Teacher va Student jadvallaridan qidiriladi. */
+  async login(dto: LoginDto) {
+    const [user, teacher, student] = await Promise.all([
+      this.prisma.user.findUnique({ where: { email: dto.email } }),
+      this.prisma.teacher.findUnique({ where: { email: dto.email } }),
+      this.prisma.student.findUnique({ where: { email: dto.email } }),
+    ]);
+
+    const candidates: Array<{ account: Account; role: Role; mustChange: boolean }> = [];
+    if (user && ADMIN_LOGIN_ROLES.includes(user.role)) {
+      candidates.push({ account: user, role: user.role, mustChange: false });
+    }
+    if (teacher) candidates.push({ account: teacher, role: Role.TEACHER, mustChange: false });
+    if (student) {
+      candidates.push({ account: student, role: Role.STUDENT, mustChange: student.mustChangePassword });
+    }
+
+    // Email topilmasa ham bcrypt ishlaydi: javob vaqti emailning bor-yo'qligini oshkor qilmasin
+    if (candidates.length === 0) {
+      await compare(dto.password, await this.dummyHash);
+    }
+
+    for (const c of candidates) {
+      try {
+        return await this.finishLogin(c.account, c.role, dto, 'Foydalanuvchi', c.mustChange);
+      } catch (error) {
+        if (!(error instanceof UnauthorizedException)) throw error;
+      }
+    }
+    throw new UnauthorizedException("Email yoki parol noto'g'ri");
+  }
+
+  private readonly dummyHash = hashPassword('dummy-password-for-timing');
+
   async loginAdmin(dto: LoginDto) {
     const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
     const allowed = !!user && ADMIN_LOGIN_ROLES.includes(user.role);

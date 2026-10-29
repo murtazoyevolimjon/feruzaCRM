@@ -62,12 +62,16 @@ export class PaymentsService {
     if (membership.status !== Status.ACTIVE) {
       throw new BadRequestException('Guruh a\'zoligi faol emas');
     }
-    // Bir martalik to'lov guruh narxidan oshmasin
-    if (dto.amount > Number(membership.group.course.price)) {
-      throw new BadRequestException("Summa kurs narxidan oshib ketdi");
+    // Bir martalik to'lov kursning umumiy narxidan (oylik narx × oylar) oshmasin
+    const { price, durationMonth } = membership.group.course;
+    if (dto.amount > Number(price) * durationMonth) {
+      throw new BadRequestException("Summa kursning umumiy narxidan oshib ketdi");
     }
 
     const method = dto.paymentMethod ?? PaymentMethod.KYN;
+    if (method === PaymentMethod.CASH && user.role === Role.STUDENT) {
+      throw new ForbiddenException("Naqd to'lovni faqat admin qabul qila oladi");
+    }
     const invoiceNumber = `INV-${Date.now()}-${randomBytes(4).toString('hex')}`;
     const base = {
       studentGroupId: dto.studentGroupId,
@@ -78,6 +82,17 @@ export class PaymentsService {
       paymentMethod: method,
     };
 
+    if (method === PaymentMethod.CASH) {
+      // Kassada naqd qabul qilinadi: darhol yakunlanadi
+      const payment = await this.prisma.payment.create({
+        data: { ...base, status: PaymentStatus.COMPLETED, paidAt: new Date() },
+      });
+      return {
+        success: true,
+        message: "Naqd to'lov qabul qilindi",
+        data: { ...payment, amount: Number(payment.amount) },
+      };
+    }
     if (method === PaymentMethod.CARD) return this.createCard(dto, base);
     if (method === PaymentMethod.KYN) return this.createKyn(base);
 

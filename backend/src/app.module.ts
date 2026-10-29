@@ -13,6 +13,7 @@ import { SmsModule } from './common/sms/sms.module';
 import { AttendanceModule } from './modules/attendance/attendance.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { CourseModule } from './modules/course/course.module';
+import { FinanceModule } from './modules/finance/finance.module';
 import { GroupsModule } from './modules/groups/groups.module';
 import { HomeworkModule } from './modules/homework/homework.module';
 import { HomeworkResponseModule } from './modules/homework/homework-response/homework-response.module';
@@ -49,6 +50,7 @@ import { UsersModule } from './modules/users/users.module';
     HomeworkResultsModule,
     LessonVideosModule,
     PaymentsModule,
+    FinanceModule,
   ],
   providers: [UserSeeder, { provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

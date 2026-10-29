@@ -2,7 +2,40 @@
 export type UserStatus = 'ACTIVE' | 'INACTIVE' | 'FREEZE';
 export type HomeworkStatus = 'APPROVED' | 'PENDING' | 'NOT_REVIEWED' | 'REJECTED';
 export type PaymentStatus = 'PENDING' | 'COMPLETED' | 'FAILED' | 'CANCELLED' | 'REFUNDED';
-export type PaymentMethod = 'KYN' | 'CARD' | 'TRANSFER';
+export type PaymentMethod = 'KYN' | 'CARD' | 'TRANSFER' | 'CASH';
+
+export interface FinanceSummary {
+  month: string;
+  income: number;
+  expense: number;
+  profit: number;
+  incomeByMethod: Record<string, number>;
+  expenseByCategory: Record<string, number>;
+  debtTotal: number;
+  debtorCount: number;
+}
+export interface Debtor {
+  studentGroupId: number;
+  studentId: number;
+  fullName: string;
+  email: string;
+  groupName: string;
+  courseName: string;
+  monthlyPrice: number;
+  monthsDue: number;
+  expected: number;
+  paid: number;
+  debt: number;
+}
+export interface Expense {
+  id: number;
+  title: string;
+  category: string;
+  amount: number;
+  date: string;
+  note: string | null;
+  createdBy: string;
+}
 
 export interface Person {
   id: number;

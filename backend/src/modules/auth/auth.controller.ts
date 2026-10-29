@@ -15,6 +15,14 @@ const LOGIN_LIMIT = { default: { limit: 5, ttl: 60_000 } };
 export class AuthController {
   constructor(private readonly auth: AuthService) {}
 
+  @Post('login')
+  @HttpCode(200)
+  @Throttle(LOGIN_LIMIT)
+  @ApiOperation({ summary: 'Umumiy login: admin, o\'qituvchi yoki talaba rolini o\'zi aniqlaydi' })
+  login(@Body() dto: LoginDto) {
+    return this.auth.login(dto);
+  }
+
   @Post('login/admin')
   @HttpCode(200)
   @Throttle(LOGIN_LIMIT)

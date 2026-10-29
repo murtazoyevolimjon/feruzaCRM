@@ -34,8 +34,9 @@ export function toFormData(values: Record<string, unknown>): FormData {
 }
 
 export const authApi = {
-  login: async (kind: 'admin' | 'teacher' | 'student', email: string, password: string) =>
-    (await http.post(`/auth/login/${kind}`, { email, password })).data as {
+  /** Rolni server o'zi aniqlaydi (admin / o'qituvchi / talaba). */
+  login: async (email: string, password: string) =>
+    (await http.post('/auth/login', { email, password })).data as {
       accessToken: string;
       user: import('@/features/auth/store/auth.store').AuthUser;
     },

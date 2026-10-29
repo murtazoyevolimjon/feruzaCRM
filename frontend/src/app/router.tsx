@@ -15,7 +15,6 @@ import EmployeesPage from '@/features/management/employees-page';
 import RoomsPage from '@/features/management/rooms-page';
 import StudentPaymentsPage from '@/features/payments/pages/student-payments-page';
 import StudentsPage from '@/features/students/pages/students-page';
-import StudentLogin from '@/features/student/StudentLogin';
 import StudentGroupDetails from '@/features/student/pages/group-details';
 import ProfilePage from '@/features/student/pages/profile-page';
 import ScheduleDashboard from '@/features/student/pages/student-dashboard-page';
@@ -30,7 +29,7 @@ export const router = createBrowserRouter([
     element: <GuestOnlyRoute />,
     children: [
       { path: '/login', element: <LoginPage /> },
-      { path: '/student-login', element: <StudentLogin /> },
+      { path: '/student-login', element: <Navigate to="/login" replace /> },
     ],
   },
   {

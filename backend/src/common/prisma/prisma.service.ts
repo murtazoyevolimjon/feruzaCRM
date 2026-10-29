@@ -12,8 +12,12 @@ export class PrismaService
   private readonly pool: Pool;
 
   constructor(config: ConfigService) {
+    const url = config.getOrThrow<string>('DATABASE_URL');
+    const isLocal = /@(localhost|127\.0\.0\.1|postgres)(:|\/)/.test(url);
     const pool = new Pool({
-      connectionString: config.getOrThrow<string>('DATABASE_URL'),
+      connectionString: url,
+      // Supabase kabi tashqi bazalar SSL talab qiladi
+      ssl: isLocal ? undefined : { rejectUnauthorized: false },
       max: 20,
       idleTimeoutMillis: 30_000,
       connectionTimeoutMillis: 5_000,
