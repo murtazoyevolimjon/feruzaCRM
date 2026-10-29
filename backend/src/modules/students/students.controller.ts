@@ -22,6 +22,7 @@ import { ADMIN_ROLES, AuthUser, FULL_ADMIN_ROLES } from '../../common/guard/auth
 import { CurrentUser, Roles } from '../../common/guard/decorator.roles';
 import { AuthGuard } from '../../common/guard/jwt-auth.guard';
 import { RolesGuard } from '../../common/guard/roles.guard';
+import { MAX_LIMIT, Paging, PagingParams } from '../../common/utils/pagination';
 import { imageUpload } from '../../common/utils/upload';
 import { CreateStudentDto, UpdateStudentDto } from './dto/student.dto';
 import { StudentsService } from './students.service';
@@ -54,14 +55,28 @@ export class StudentsController {
   @Get()
   @Roles(...FULL_ADMIN_ROLES)
   @ApiQuery({ name: 'status', enum: UserStatus, required: false })
-  findAll(@Query('status', new ParseEnumPipe(UserStatus, { optional: true })) status?: UserStatus) {
-    return this.students.findAll(status);
+  @ApiQuery({ name: 'q', required: false })
+  @ApiQuery({ name: 'page', required: false })
+  @ApiQuery({ name: 'limit', required: false })
+  findAll(
+    @Query('status', new ParseEnumPipe(UserStatus, { optional: true })) status: UserStatus | undefined,
+    @Query('q') q: string | undefined,
+    @PagingParams() paging: Paging,
+  ) {
+    return this.students.findAll({ status, q }, paging);
   }
 
+  /** Tanlov ro'yxatlari uchun: bitta sahifada ko'proq (MAX_LIMIT gacha). */
   @Get('all')
   @Roles(...FULL_ADMIN_ROLES)
-  all() {
-    return this.students.findAll();
+  @ApiQuery({ name: 'status', enum: UserStatus, required: false })
+  @ApiQuery({ name: 'q', required: false })
+  all(
+    @Query('status', new ParseEnumPipe(UserStatus, { optional: true })) status: UserStatus | undefined,
+    @Query('q') q: string | undefined,
+    @PagingParams() paging: Paging,
+  ) {
+    return this.students.findAll({ status, q }, paging, MAX_LIMIT);
   }
 
   @Get('stats/summary')

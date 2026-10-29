@@ -15,6 +15,7 @@ import { ADMIN_ROLES, AuthUser, FULL_ADMIN_ROLES } from '../../common/guard/auth
 import { CurrentUser, Roles } from '../../common/guard/decorator.roles';
 import { AuthGuard } from '../../common/guard/jwt-auth.guard';
 import { RolesGuard } from '../../common/guard/roles.guard';
+import { Paging, PagingParams } from '../../common/utils/pagination';
 import { AddStudentToGroupDto, CreateGroupDto, UpdateGroupDto } from './dto/group.dto';
 import { GroupsService } from './groups.service';
 
@@ -28,14 +29,14 @@ export class GroupsController {
   @Get()
   @Roles(...ADMIN_ROLES)
   @ApiOperation({ summary: "Faol guruhlar ro'yxati" })
-  findAll() {
-    return this.groups.findAll();
+  findAll(@PagingParams() paging: Paging) {
+    return this.groups.findAll(paging);
   }
 
   @Get('all')
   @Roles(...ADMIN_ROLES)
-  all() {
-    return this.groups.findAll();
+  all(@PagingParams() paging: Paging) {
+    return this.groups.findAll(paging);
   }
 
   @Get('students/:groupId')

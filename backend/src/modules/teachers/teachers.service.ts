@@ -4,12 +4,13 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Status, UserStatus } from '@prisma/client';
+import { Prisma, Status, UserStatus } from '@prisma/client';
 import { compare, hashPassword } from '../../common/bcrypt/bcrypt';
 import { CloudinaryService } from '../../common/cloudinary/cloudinary.service';
 import { handlePrismaError } from '../../common/prisma/prisma-error.helper';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { assertEmailFree } from '../../common/utils/email-unique';
+import { DEFAULT_LIMIT, Paging, pageArgs, pageMeta } from '../../common/utils/pagination';
 import { generateRandomPassword } from '../../common/utils/password.util';
 import { groupSummaryInclude, toGroupSummary } from '../groups/group.mapper';
 import {
@@ -49,12 +50,35 @@ export class TeachersService {
     }
   }
 
-  async findAll() {
-    const data = await this.prisma.teacher.findMany({
-      omit: OMIT_PASSWORD,
-      orderBy: { created_at: 'desc' },
-    });
-    return { success: true, data };
+  async findAll(
+    filter: { status?: UserStatus; q?: string } = {},
+    paging: Paging = {},
+    defaultLimit = DEFAULT_LIMIT,
+  ) {
+    const args = pageArgs(paging, defaultLimit);
+    const term = filter.q?.trim();
+    const where: Prisma.TeacherWhereInput = {
+      ...(filter.status ? { status: filter.status } : {}),
+      ...(term
+        ? {
+            OR: [
+              { fullName: { contains: term, mode: 'insensitive' } },
+              { email: { contains: term, mode: 'insensitive' } },
+            ],
+          }
+        : {}),
+    };
+    const [data, total] = await Promise.all([
+      this.prisma.teacher.findMany({
+        where,
+        omit: OMIT_PASSWORD,
+        orderBy: { created_at: 'desc' },
+        skip: args.skip,
+        take: args.take,
+      }),
+      this.prisma.teacher.count({ where }),
+    ]);
+    return { success: true, data, meta: pageMeta(total, args) };
   }
 
   async findOne(id: number) {

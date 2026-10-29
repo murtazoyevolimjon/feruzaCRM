@@ -2,11 +2,13 @@ import { useCallback, useEffect, useRef, useState, type ComponentType, type Reac
 import { Link } from 'react-router-dom';
 import { Inbox, Loader2, TriangleAlert, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { get } from '@/api/endpoints';
+import { getPaged } from '@/api/endpoints';
+import type { PageMeta } from '@/api/types';
 import { cn, errorMessage } from '@/lib/utils';
 
 export function useFetch<T>(url: string | null, params?: Record<string, unknown>, initial?: T) {
   const [data, setData] = useState<T | undefined>(initial);
+  const [meta, setMeta] = useState<PageMeta | undefined>();
   const [loading, setLoading] = useState(!!url);
   const [error, setError] = useState<string | null>(null);
   const key = JSON.stringify(params ?? {});
@@ -16,7 +18,9 @@ export function useFetch<T>(url: string | null, params?: Record<string, unknown>
     setLoading(true);
     setError(null);
     try {
-      setData(await get<T>(url, params));
+      const res = await getPaged<T>(url, params);
+      setData(res.data);
+      setMeta(res.meta);
     } catch (e) {
       setError(errorMessage(e));
     } finally {
@@ -29,7 +33,22 @@ export function useFetch<T>(url: string | null, params?: Record<string, unknown>
     void reload();
   }, [reload]);
 
-  return { data, loading, error, reload };
+  return { data, meta, loading, error, reload };
+}
+
+/** Sahifalash tugmalari; bitta sahifa bo'lsa ko'rinmaydi. */
+export function Pager({ meta, onPage }: { meta?: PageMeta; onPage: (page: number) => void }) {
+  if (!meta || meta.pages <= 1) return null;
+  return (
+    <div className="flex items-center justify-between gap-3 border-t border-slate-100 px-4 py-3 text-[13px] text-slate-500 dark:border-slate-800">
+      <span>Jami: {meta.total}</span>
+      <div className="flex items-center gap-2">
+        <button className="btn btn-ghost !py-1.5" disabled={meta.page <= 1} onClick={() => onPage(meta.page - 1)}>← Oldingi</button>
+        <span className="font-semibold text-slate-700 dark:text-slate-200">{meta.page} / {meta.pages}</span>
+        <button className="btn btn-ghost !py-1.5" disabled={meta.page >= meta.pages} onClick={() => onPage(meta.page + 1)}>Keyingi →</button>
+      </div>
+    </div>
+  );
 }
 
 export function Spinner() {

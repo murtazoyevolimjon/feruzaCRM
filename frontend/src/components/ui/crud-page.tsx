@@ -4,7 +4,9 @@ import { KeyRound, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { send, toFormData } from '@/api/endpoints';
 import { errorMessage } from '@/lib/utils';
-import { AsyncState, Badge, Field, Modal, statusTone, useFetch } from './common';
+import { AsyncState, Badge, Field, Modal, Pager, statusTone, useFetch } from './common';
+
+const PAGE_SIZE = 20;
 
 export interface FormField {
   name: string;
@@ -42,10 +44,28 @@ interface Props<T extends { id: number; status?: string }> {
 
 export function CrudPage<T extends { id: number; status?: string }>(p: Props<T>) {
   const { t } = useTranslation();
-  const { data, loading, error, reload } = useFetch<T[]>(p.listUrl, undefined, []);
   const [params, setParams] = useSearchParams();
   const [query, setQuery] = useState(params.get('q') ?? '');
   const [status, setStatus] = useState('');
+  const [page, setPage] = useState(1);
+  const [serverQuery, setServerQuery] = useState(query);
+
+  // Qidiruv serverga biroz kechikib ketadi (har harfga so'rov yubormaslik uchun)
+  useEffect(() => {
+    const id = window.setTimeout(() => {
+      setServerQuery(query);
+      setPage(1);
+    }, 300);
+    return () => window.clearTimeout(id);
+  }, [query]);
+
+  const { data, meta, loading, error, reload } = useFetch<T[]>(
+    p.listUrl,
+    { page, limit: PAGE_SIZE, q: serverQuery || undefined, status: status || undefined },
+    [],
+  );
+  // Server sahifalasa (meta bor) — qidiruv va holat filtri serverda; bo'lmasa brauzerda
+  const serverSide = !!meta;
   const [editing, setEditing] = useState<T | 'new' | null>(null);
   const [values, setValues] = useState<Record<string, unknown>>({});
   const [formError, setFormError] = useState<string | null>(null);
@@ -54,13 +74,14 @@ export function CrudPage<T extends { id: number; status?: string }>(p: Props<T>)
 
   const rows = useMemo(() => {
     const list = Array.isArray(data) ? data : [];
+    if (serverSide) return list;
     return list.filter(
       (r) =>
         (!status || r.status === status) &&
         p.searchText(r).toLowerCase().includes(query.toLowerCase()),
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data, query, status]);
+  }, [data, query, status, serverSide]);
 
   const open = (row: T | 'new') => {
     setFormError(null);
@@ -126,7 +147,7 @@ export function CrudPage<T extends { id: number; status?: string }>(p: Props<T>)
         <h1 className="mr-auto text-2xl font-bold">{p.title}</h1>
         <input className="input max-w-56" placeholder={t('search')} value={query} onChange={(e) => setQuery(e.target.value)} />
         {p.statusFilter && (
-          <select className="input max-w-40" value={status} onChange={(e) => setStatus(e.target.value)}>
+          <select className="input max-w-40" value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }}>
             <option value="">{t('all')}</option>
             {['ACTIVE', 'FREEZE', 'INACTIVE'].map((s) => (
               <option key={s} value={s}>{s}</option>
@@ -175,6 +196,7 @@ export function CrudPage<T extends { id: number; status?: string }>(p: Props<T>)
             </tbody>
           </table>
         </AsyncState>
+        <Pager meta={meta} onPage={setPage} />
       </div>
 
       {editing && (

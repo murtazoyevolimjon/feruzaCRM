@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { AlertCircle, ArrowDownLeft, ArrowUpRight, PiggyBank, Trash2, Wallet } from 'lucide-react';
 import { get, send } from '@/api/endpoints';
 import type { Debtor, Expense, FinanceSummary, GroupDetails, GroupSummary, PaymentNotification } from '@/api/types';
-import { AsyncState, Badge, Field, Modal, StatCard, useFetch } from '@/components/ui/common';
+import { AsyncState, Badge, Field, Modal, Pager, StatCard, useFetch } from '@/components/ui/common';
 import { authStore } from '@/features/auth/store/auth.store';
 import { PaymentModal } from '@/features/payments/components/payment-modal';
 import { FULL_ADMIN_ROLES } from '@/lib/constants';
@@ -151,10 +151,18 @@ export default function FinancePage() {
   const [version, setVersion] = useState(0);
   const refresh = () => setVersion((n) => n + 1);
 
+  const [incomePage, setIncomePage] = useState(1);
+  const [expensePage, setExpensePage] = useState(1);
+  const changeMonth = (value: string) => {
+    setMonth(value);
+    setIncomePage(1);
+    setExpensePage(1);
+  };
+
   const q = { month, v: version };
   const summary = useFetch<FinanceSummary>('/finance/summary', q);
-  const income = useFetch<PaymentNotification[]>(tab === 'income' ? '/finance/payments' : null, q, []);
-  const expenses = useFetch<Expense[]>(tab === 'expense' || tab === 'overview' ? '/finance/expenses' : null, q, []);
+  const income = useFetch<PaymentNotification[]>(tab === 'income' ? '/finance/payments' : null, { ...q, page: incomePage }, []);
+  const expenses = useFetch<Expense[]>(tab === 'expense' || tab === 'overview' ? '/finance/expenses' : null, { ...q, page: expensePage }, []);
   const debtors = useFetch<Debtor[]>('/finance/debtors', { v: version }, []);
 
   useEffect(() => {
@@ -186,7 +194,7 @@ export default function FinancePage() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="mr-auto">Moliya va Kassa</h1>
-        <input type="month" className="input w-44" value={month} onChange={(e) => e.target.value && setMonth(e.target.value)} />
+        <input type="month" className="input w-44" value={month} onChange={(e) => e.target.value && changeMonth(e.target.value)} />
         {canWrite && (
           <>
             <button className="btn btn-ghost" onClick={() => setExpenseOpen(true)}>− Chiqim qo'shish</button>
@@ -261,6 +269,7 @@ export default function FinancePage() {
               </tbody>
             </table>
           </AsyncState>
+          <Pager meta={income.meta} onPage={setIncomePage} />
         </div>
       )}
 
@@ -288,6 +297,7 @@ export default function FinancePage() {
               </tbody>
             </table>
           </AsyncState>
+          <Pager meta={expenses.meta} onPage={setExpensePage} />
         </div>
       )}
 

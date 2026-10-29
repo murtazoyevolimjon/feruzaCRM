@@ -4,17 +4,20 @@ import {
   Delete,
   Get,
   Param,
+  ParseEnumPipe,
   ParseIntPipe,
   Post,
   Put,
+  Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Role } from '@prisma/client';
+import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { Role, UserStatus } from '@prisma/client';
 import { AuthUser, ADMIN_ROLES, FULL_ADMIN_ROLES } from '../../common/guard/auth-user';
 import { CurrentUser, Roles } from '../../common/guard/decorator.roles';
 import { AuthGuard } from '../../common/guard/jwt-auth.guard';
 import { RolesGuard } from '../../common/guard/roles.guard';
+import { Paging, PagingParams } from '../../common/utils/pagination';
 import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
 import { UsersService } from './users.service';
 
@@ -35,8 +38,14 @@ export class UsersController {
   @Get()
   @Roles(...ADMIN_ROLES)
   @ApiOperation({ summary: "Xodimlar ro'yxati" })
-  findAll() {
-    return this.users.findAll();
+  @ApiQuery({ name: 'status', enum: UserStatus, required: false })
+  @ApiQuery({ name: 'q', required: false })
+  findAll(
+    @Query('status', new ParseEnumPipe(UserStatus, { optional: true })) status: UserStatus | undefined,
+    @Query('q') q: string | undefined,
+    @PagingParams() paging: Paging,
+  ) {
+    return this.users.findAll({ status, q }, paging);
   }
 
   @Get(':id')

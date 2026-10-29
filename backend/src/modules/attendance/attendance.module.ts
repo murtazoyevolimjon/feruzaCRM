@@ -98,10 +98,15 @@ export class AttendanceService {
 
   /** Bir dars + bir talaba uchun davomat yagona yozuv (upsert). */
   async mark(dto: MarkAttendanceDto, user: AuthUser) {
-    const lesson = await this.lessonOrThrow(dto.lessonId, user);
-    const membership = await this.prisma.studentGroup.findUnique({
-      where: { groupId_studentId: { groupId: lesson.groupId, studentId: dto.studentId } },
-    });
+    // Dars topilgach, guruh ruxsati va a'zolik tekshiruvi parallel (ketma-ket emas)
+    const lesson = await this.prisma.lesson.findUnique({ where: { id: dto.lessonId } });
+    if (!lesson) throw new NotFoundException('Dars topilmadi');
+    const [, membership] = await Promise.all([
+      assertGroupAccess(this.prisma, user, lesson.groupId),
+      this.prisma.studentGroup.findUnique({
+        where: { groupId_studentId: { groupId: lesson.groupId, studentId: dto.studentId } },
+      }),
+    ]);
     if (!membership || membership.status !== Status.ACTIVE) {
       throw new BadRequestException('Talaba bu guruhning faol a\'zosi emas');
     }

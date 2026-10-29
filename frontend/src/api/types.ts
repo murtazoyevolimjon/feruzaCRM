@@ -4,6 +4,13 @@ export type HomeworkStatus = 'APPROVED' | 'PENDING' | 'NOT_REVIEWED' | 'REJECTED
 export type PaymentStatus = 'PENDING' | 'COMPLETED' | 'FAILED' | 'CANCELLED' | 'REFUNDED';
 export type PaymentMethod = 'KYN' | 'CARD' | 'TRANSFER' | 'CASH';
 
+export interface PageMeta {
+  total: number;
+  page: number;
+  limit: number;
+  pages: number;
+}
+
 export interface FinanceSummary {
   month: string;
   income: number;

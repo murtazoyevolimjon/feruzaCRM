@@ -19,6 +19,7 @@ import { AuthGuard } from '../../common/guard/jwt-auth.guard';
 import { RolesGuard } from '../../common/guard/roles.guard';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { assertGroupAccess, creatorIds } from '../../common/utils/group-access';
+import { lessonSelect } from '../../common/utils/lesson-select';
 
 export class CreateLessonDto {
   @ApiProperty({ example: 1 })
@@ -45,6 +46,7 @@ export class LessonsService {
     await assertGroupAccess(this.prisma, user, groupId);
     const data = await this.prisma.lesson.findMany({
       where: { groupId },
+      select: lessonSelect,
       orderBy: { date: 'desc' },
     });
     return { success: true, data };

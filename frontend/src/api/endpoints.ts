@@ -1,10 +1,20 @@
 import { http } from './axios';
 import { unwrap } from '@/lib/utils';
+import type { PageMeta } from './types';
 
 /** GET va javobni `data?.data ?? data` bilan ochadi. */
 export async function get<T>(url: string, params?: Record<string, unknown>): Promise<T> {
   const res = await http.get(url, { params });
   return unwrap<T>(res.data);
+}
+
+/** Sahifalangan javob: ma'lumot + `meta` (server bermasa meta yo'q). */
+export async function getPaged<T>(
+  url: string,
+  params?: Record<string, unknown>,
+): Promise<{ data: T; meta?: PageMeta }> {
+  const res = await http.get(url, { params });
+  return { data: unwrap<T>(res.data), meta: (res.data as { meta?: PageMeta } | null)?.meta };
 }
 
 export async function send<T = unknown>(

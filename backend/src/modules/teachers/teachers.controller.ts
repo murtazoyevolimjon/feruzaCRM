@@ -4,20 +4,23 @@ import {
   Delete,
   Get,
   Param,
+  ParseEnumPipe,
   ParseIntPipe,
   Post,
   Put,
+  Query,
   UploadedFile,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Role } from '@prisma/client';
+import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { Role, UserStatus } from '@prisma/client';
 import { ADMIN_ROLES, AuthUser, FULL_ADMIN_ROLES } from '../../common/guard/auth-user';
 import { CurrentUser, Roles } from '../../common/guard/decorator.roles';
 import { AuthGuard } from '../../common/guard/jwt-auth.guard';
 import { RolesGuard } from '../../common/guard/roles.guard';
+import { MAX_LIMIT, Paging, PagingParams } from '../../common/utils/pagination';
 import { imageUpload } from '../../common/utils/upload';
 import {
   CreateTeacherDto,
@@ -44,8 +47,16 @@ export class TeachersController {
 
   @Get('all')
   @Roles(...ADMIN_ROLES)
-  findAll() {
-    return this.teachers.findAll();
+  @ApiQuery({ name: 'status', enum: UserStatus, required: false })
+  @ApiQuery({ name: 'q', required: false })
+  @ApiQuery({ name: 'page', required: false })
+  @ApiQuery({ name: 'limit', required: false })
+  findAll(
+    @Query('status', new ParseEnumPipe(UserStatus, { optional: true })) status: UserStatus | undefined,
+    @Query('q') q: string | undefined,
+    @PagingParams() paging: Paging,
+  ) {
+    return this.teachers.findAll({ status, q }, paging, MAX_LIMIT);
   }
 
   @Get('me')

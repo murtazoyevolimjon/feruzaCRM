@@ -9,6 +9,8 @@ import { AuthUser } from '../../common/guard/auth-user';
 import { handlePrismaError } from '../../common/prisma/prisma-error.helper';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { assertGroupAccess } from '../../common/utils/group-access';
+import { lessonSelect } from '../../common/utils/lesson-select';
+import { MAX_LIMIT, Paging, pageArgs, pageMeta } from '../../common/utils/pagination';
 import { CreateGroupDto, UpdateGroupDto } from './dto/group.dto';
 import { groupSummaryInclude, toGroupSummary } from './group.mapper';
 import { hasRoomConflict } from './room-conflict.util';
@@ -17,13 +19,21 @@ import { hasRoomConflict } from './room-conflict.util';
 export class GroupsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll() {
-    const groups = await this.prisma.group.findMany({
-      where: { status: Status.ACTIVE },
-      include: groupSummaryInclude,
-      orderBy: { created_at: 'desc' },
-    });
-    return { success: true, data: groups.map(toGroupSummary) };
+  /** Dashboard va tanlovlar butun ro'yxatni kutadi, shuning uchun standart limit — MAX_LIMIT. */
+  async findAll(paging: Paging = {}) {
+    const args = pageArgs(paging, MAX_LIMIT);
+    const where = { status: Status.ACTIVE };
+    const [groups, total] = await Promise.all([
+      this.prisma.group.findMany({
+        where,
+        include: groupSummaryInclude,
+        orderBy: { created_at: 'desc' },
+        skip: args.skip,
+        take: args.take,
+      }),
+      this.prisma.group.count({ where }),
+    ]);
+    return { success: true, data: groups.map(toGroupSummary), meta: pageMeta(total, args) };
   }
 
   async findOne(id: number, user: AuthUser) {
@@ -76,6 +86,7 @@ export class GroupsService {
     await assertGroupAccess(this.prisma, user, groupId);
     const data = await this.prisma.lesson.findMany({
       where: { groupId },
+      select: lessonSelect,
       orderBy: { date: 'desc' },
     });
     return { success: true, data };

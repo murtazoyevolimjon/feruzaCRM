@@ -4,7 +4,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { Role, Status, UserStatus } from '@prisma/client';
+import { Prisma, Role, Status, UserStatus } from '@prisma/client';
 import { hashPassword } from '../../common/bcrypt/bcrypt';
 import { CloudinaryService } from '../../common/cloudinary/cloudinary.service';
 import { EmailService } from '../../common/email/email.service';
@@ -12,6 +12,8 @@ import { AuthUser } from '../../common/guard/auth-user';
 import { handlePrismaError } from '../../common/prisma/prisma-error.helper';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { assertEmailFree } from '../../common/utils/email-unique';
+import { lessonSelect } from '../../common/utils/lesson-select';
+import { DEFAULT_LIMIT, Paging, pageArgs, pageMeta } from '../../common/utils/pagination';
 import { generateRandomPassword } from '../../common/utils/password.util';
 import { groupSummaryInclude, toGroupSummary } from '../groups/group.mapper';
 import { CreateStudentDto, UpdateStudentDto } from './dto/student.dto';
@@ -58,13 +60,35 @@ export class StudentsService {
     return { success: true, data: { url } };
   }
 
-  async findAll(status?: UserStatus) {
-    const data = await this.prisma.student.findMany({
-      where: status ? { status } : undefined,
-      omit: OMIT_PASSWORD,
-      orderBy: { created_at: 'desc' },
-    });
-    return { success: true, data };
+  async findAll(
+    filter: { status?: UserStatus; q?: string } = {},
+    paging: Paging = {},
+    defaultLimit = DEFAULT_LIMIT,
+  ) {
+    const args = pageArgs(paging, defaultLimit);
+    const q = filter.q?.trim();
+    const where: Prisma.StudentWhereInput = {
+      ...(filter.status ? { status: filter.status } : {}),
+      ...(q
+        ? {
+            OR: [
+              { fullName: { contains: q, mode: 'insensitive' } },
+              { email: { contains: q, mode: 'insensitive' } },
+            ],
+          }
+        : {}),
+    };
+    const [data, total] = await Promise.all([
+      this.prisma.student.findMany({
+        where,
+        omit: OMIT_PASSWORD,
+        orderBy: { created_at: 'desc' },
+        skip: args.skip,
+        take: args.take,
+      }),
+      this.prisma.student.count({ where }),
+    ]);
+    return { success: true, data, meta: pageMeta(total, args) };
   }
 
   async findOne(id: number, actor: AuthUser) {
@@ -183,6 +207,7 @@ export class StudentsService {
     await this.assertMember(studentId, groupId);
     const data = await this.prisma.lesson.findMany({
       where: { groupId },
+      select: lessonSelect,
       orderBy: { date: 'desc' },
     });
     return { success: true, data };

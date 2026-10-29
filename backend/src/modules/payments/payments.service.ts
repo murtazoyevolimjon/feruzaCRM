@@ -13,6 +13,7 @@ import { randomBytes, randomInt } from 'crypto';
 import { AuthUser } from '../../common/guard/auth-user';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { RedisService } from '../../common/redis/redis.service';
+import { Paging, pageArgs, pageMeta } from '../../common/utils/pagination';
 import { SmsService } from '../../common/sms/sms.service';
 import { ConfirmCardOtpDto, CreatePaymentDto, WebhookDto } from './dto/payment.dto';
 import { verifyWebhookSignature } from './kyn-signature.util';
@@ -264,12 +265,19 @@ export class PaymentsService {
     }
   }
 
-  async myPayments(user: AuthUser) {
-    const data = await this.prisma.payment.findMany({
-      where: { studentId: user.id },
-      orderBy: { created_at: 'desc' },
-      include: { studentGroup: { include: { group: { select: { name: true } } } } },
-    });
+  async myPayments(user: AuthUser, paging: Paging = {}) {
+    const args = pageArgs(paging);
+    const where = { studentId: user.id };
+    const [data, total] = await Promise.all([
+      this.prisma.payment.findMany({
+        where,
+        orderBy: { created_at: 'desc' },
+        include: { studentGroup: { include: { group: { select: { name: true } } } } },
+        skip: args.skip,
+        take: args.take,
+      }),
+      this.prisma.payment.count({ where }),
+    ]);
     return {
       success: true,
       data: data.map(({ studentGroup, ...p }) => ({
@@ -277,6 +285,7 @@ export class PaymentsService {
         amount: Number(p.amount),
         groupName: studentGroup.group.name,
       })),
+      meta: pageMeta(total, args),
     };
   }
 
@@ -310,15 +319,20 @@ export class PaymentsService {
       const sg = await this.prisma.studentGroup.findUnique({ where: { id: studentGroupId } });
       if (!sg || sg.studentId !== user.id) throw new ForbiddenException("Bu a'zolik sizniki emas");
     }
-    const payments = await this.prisma.payment.findMany({ where: { studentGroupId } });
+    // Hisob bazada: holat bo'yicha bitta guruhlangan so'rov (barcha to'lovlarni yuklamaydi)
+    const rows = await this.prisma.payment.groupBy({
+      by: ['status'],
+      where: { studentGroupId },
+      _count: { _all: true },
+      _sum: { amount: true },
+    });
+    const of = (status: PaymentStatus) => rows.find((r) => r.status === status);
     return {
       success: true,
       data: {
-        totalPayments: payments.length,
-        completedAmount: payments
-          .filter((p) => p.status === PaymentStatus.COMPLETED)
-          .reduce((sum, p) => sum + Number(p.amount), 0),
-        pendingCount: payments.filter((p) => p.status === PaymentStatus.PENDING).length,
+        totalPayments: rows.reduce((sum, r) => sum + r._count._all, 0),
+        completedAmount: Number(of(PaymentStatus.COMPLETED)?._sum.amount ?? 0),
+        pendingCount: of(PaymentStatus.PENDING)?._count._all ?? 0,
       },
     };
   }

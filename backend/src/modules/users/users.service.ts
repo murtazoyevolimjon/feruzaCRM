@@ -4,12 +4,13 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Role, UserStatus } from '@prisma/client';
+import { Prisma, Role, UserStatus } from '@prisma/client';
 import { hashPassword } from '../../common/bcrypt/bcrypt';
 import { AuthUser, FULL_ADMIN_ROLES } from '../../common/guard/auth-user';
 import { handlePrismaError } from '../../common/prisma/prisma-error.helper';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { assertEmailFree } from '../../common/utils/email-unique';
+import { Paging, pageArgs, pageMeta } from '../../common/utils/pagination';
 import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
 
 const OMIT_PASSWORD = { password: true } as const;
@@ -35,12 +36,31 @@ export class UsersService {
     }
   }
 
-  async findAll() {
-    const data = await this.prisma.user.findMany({
-      omit: OMIT_PASSWORD,
-      orderBy: { created_at: 'desc' },
-    });
-    return { success: true, data };
+  async findAll(filter: { status?: UserStatus; q?: string } = {}, paging: Paging = {}) {
+    const args = pageArgs(paging);
+    const term = filter.q?.trim();
+    const where: Prisma.UserWhereInput = {
+      ...(filter.status ? { status: filter.status } : {}),
+      ...(term
+        ? {
+            OR: [
+              { fullName: { contains: term, mode: 'insensitive' } },
+              { email: { contains: term, mode: 'insensitive' } },
+            ],
+          }
+        : {}),
+    };
+    const [data, total] = await Promise.all([
+      this.prisma.user.findMany({
+        where,
+        omit: OMIT_PASSWORD,
+        orderBy: { created_at: 'desc' },
+        skip: args.skip,
+        take: args.take,
+      }),
+      this.prisma.user.count({ where }),
+    ]);
+    return { success: true, data, meta: pageMeta(total, args) };
   }
 
   async findOne(id: number) {

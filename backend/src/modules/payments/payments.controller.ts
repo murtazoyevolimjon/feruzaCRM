@@ -15,6 +15,7 @@ import { ADMIN_ROLES, AuthUser, FULL_ADMIN_ROLES } from '../../common/guard/auth
 import { CurrentUser, Roles } from '../../common/guard/decorator.roles';
 import { AuthGuard } from '../../common/guard/jwt-auth.guard';
 import { RolesGuard } from '../../common/guard/roles.guard';
+import { Paging, PagingParams } from '../../common/utils/pagination';
 import { ConfirmCardOtpDto, CreatePaymentDto, WebhookDto } from './dto/payment.dto';
 import { PaymentsService } from './payments.service';
 
@@ -60,8 +61,8 @@ export class PaymentsController {
   @ApiBearerAuth()
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.STUDENT)
-  myPayments(@CurrentUser() user: AuthUser) {
-    return this.payments.myPayments(user);
+  myPayments(@CurrentUser() user: AuthUser, @PagingParams() paging: Paging) {
+    return this.payments.myPayments(user, paging);
   }
 
   @Get('admin-notifications')
